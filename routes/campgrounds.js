@@ -12,6 +12,24 @@ function isLoggedIn(req, res, next) {
 	}
 }
 
+function isAuthorized(req, res, next) {
+	if(req.isAuthenticated()) {
+		Campground.findById(req.params.id, function(err, foundCampground) {
+			if(err) {
+				res.redirect("back");
+			} else {
+				if (foundCampground.author.id.equals(req.user._id)) {
+					return next();
+				} else {
+					res.redirect("back");
+				}
+			}
+		});
+	} else {
+		res.redirect("back");
+	}
+}
+
 // INDEX route
 router.get("/", function(req, res) {
 	Campground.find({}, function(err, allCampgrounds) {
@@ -60,7 +78,7 @@ router.get("/:id", function(req, res) {
 });
 
 // EDIT route
-router.get("/:id/edit", function(req, res) {
+router.get("/:id/edit", isAuthorized, function(req, res) {
 	Campground.findById(req.params.id, function(err, foundCampground) {
 		if(err) {
 			res.redirect("/campground");
@@ -71,7 +89,7 @@ router.get("/:id/edit", function(req, res) {
 });
 
 // UPDATE route
-router.put("/:id", function(req, res) {
+router.put("/:id", isAuthorized, function(req, res) {
 	Campground.findByIdAndUpdate(req.params.id, req.body.campground, function(err, updateCampground) {
 		if(err) {
 			res.redirect("/campgrounds");
@@ -84,7 +102,7 @@ router.put("/:id", function(req, res) {
 
 
 // DESTROY route
-router.delete("/:id", function(req, res) {
+router.delete("/:id", isAuthorized, function(req, res) {
 	Campground.findByIdAndRemove(req.params.id, function(err) {
 		if(err) {
 			res.redirect("/campgrounds/" + req.params.id);

@@ -11,9 +11,30 @@ function isLoggedIn(req, res, next) {
 	}
 }
 
+function isAuthorized(req, res, next) {
+	if(req.isAuthenticated()) {
+		Comment.findById(req.params.comment_id, function(err, foundComment) {
+			if(err) {
+				res.redirect("back");
+			} else {
+				if (foundComment.author.id.equals(req.user._id)) {
+					return next();
+				} else {
+					res.redirect("back");
+				}
+			}
+		});
+	} else {
+		res.redirect("back");
+	}
+}
+
+
 ///////////////////////
 // COMMENTS routes
 ///////////////////////
+
+// NEW route
 router.get("/new", isLoggedIn, function(req, res) {
 	Campground.findById(req.params.id, function(err, foundCampground) {
 		if(err) {
@@ -24,6 +45,7 @@ router.get("/new", isLoggedIn, function(req, res) {
 	})
 });
 
+// CREATE route
 router.post("/", isLoggedIn, function(req, res) {
 	Campground.findById(req.params.id, function(err, foundCampground) {
 		if(err) {
@@ -46,6 +68,41 @@ router.post("/", isLoggedIn, function(req, res) {
 		}
 	});
 });
+
+// EDIT route
+router.get("/:comment_id/edit", isAuthorized, function(req, res) {
+	Comment.findById(req.params.comment_id, function(err, foundComment) {
+		if(err) {
+			res.redirect("back");
+		} else {
+			res.render("comments/edit", {campground_id: req.params.id, comment: foundComment});
+		}
+	})
+});
+
+// UPDATE route
+router.put("/:comment_id", isAuthorized, function(req,res) {
+	Comment.findByIdAndUpdate("req.params.comment_id", req.body.comment, function(err, updatedComment) {
+		if(err) {
+			res.redirect("back");
+		} else {
+			res.redirect("/campgrounds/" + req.params.id);
+		}
+	});
+});
+
+
+// DESTROY route
+router.delete("/:comment_id", isAuthorized, function(req, res) {
+	Comment.findByIdAndRemove(req.params.comment_id, function(err) {
+		if(err) {
+			res.redirect("back");
+		} else {
+			res.redirect("/campgrounds/" + req.params.id);
+		}
+	});
+});
+
 ///////////////////////////
 // End of comments routes
 ///////////////////////////
