@@ -2,33 +2,8 @@ var express = require("express"),
 		router = express.Router(),
 		passport = require("passport"),
 		Campground = require("../models/campground"),
-		User = require("../models/user");
-
-function isLoggedIn(req, res, next) {
-	if(req.isAuthenticated()) {
-		return next();
-	} else {
-		res.redirect("/login");
-	}
-}
-
-function isAuthorized(req, res, next) {
-	if(req.isAuthenticated()) {
-		Campground.findById(req.params.id, function(err, foundCampground) {
-			if(err) {
-				res.redirect("back");
-			} else {
-				if (foundCampground.author.id.equals(req.user._id)) {
-					return next();
-				} else {
-					res.redirect("back");
-				}
-			}
-		});
-	} else {
-		res.redirect("back");
-	}
-}
+		User = require("../models/user"),
+		middleware = require("../middleware");
 
 // INDEX route
 router.get("/", function(req, res) {
@@ -42,20 +17,21 @@ router.get("/", function(req, res) {
 });
 
 // NEW route
-router.get("/new", isLoggedIn, function(req, res) {
+router.get("/new", middleware.isLoggedIn, function(req, res) {
 	res.render("campgrounds/new");
 });
 
 // CREATE route
-router.post("/", isLoggedIn, function(req, res) {
+router.post("/", middleware.isLoggedIn, function(req, res) {
 	var name = req.body.name;
+	var price = req.body.price;
 	var image = req.body.image;
 	var description = req.body.description;
 	var author = {
 		id: req.user._id,
 		username: req.user.username
 	};
-	var newCampground = {name:name, image:image, description:description, author: author};
+	var newCampground = {name:name, price:price, image:image, description:description, author: author};
 	Campground.create(newCampground, function(err, newlyCreated) {
 		if(err) {
 			console.log(err);
@@ -78,7 +54,7 @@ router.get("/:id", function(req, res) {
 });
 
 // EDIT route
-router.get("/:id/edit", isAuthorized, function(req, res) {
+router.get("/:id/edit", middleware.campgroundAuth, function(req, res) {
 	Campground.findById(req.params.id, function(err, foundCampground) {
 		if(err) {
 			res.redirect("/campground");
@@ -89,7 +65,7 @@ router.get("/:id/edit", isAuthorized, function(req, res) {
 });
 
 // UPDATE route
-router.put("/:id", isAuthorized, function(req, res) {
+router.put("/:id", middleware.campgroundAuth, function(req, res) {
 	Campground.findByIdAndUpdate(req.params.id, req.body.campground, function(err, updateCampground) {
 		if(err) {
 			res.redirect("/campgrounds");
@@ -99,10 +75,8 @@ router.put("/:id", isAuthorized, function(req, res) {
 	});
 });
 
-
-
 // DESTROY route
-router.delete("/:id", isAuthorized, function(req, res) {
+router.delete("/:id", middleware.campgroundAuth, function(req, res) {
 	Campground.findByIdAndRemove(req.params.id, function(err) {
 		if(err) {
 			res.redirect("/campgrounds/" + req.params.id);

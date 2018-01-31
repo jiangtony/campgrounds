@@ -8,14 +8,6 @@ router.get("/", function(req, res) {
 	res.render("landing");
 });
 
-function isLoggedIn(req, res, next) {
-	if(req.isAuthenticated()) {
-		return next();
-	} else {
-		res.redirect("/login");
-	}
-}
-
 ///////////////////////////
 // AUTHENTICATION routes
 ///////////////////////////
@@ -29,8 +21,8 @@ router.post("/register", function(req, res) {
 	var newUser = new User({username: req.body.username});
 	User.register(newUser, req.body.password, function(err, user) {
 		if(err) {
-			console.log(err);
-			return res.render("register");
+			req.flash("error", err.message);
+			return res.redirect("/register");
 		}
 		passport.authenticate("local")(req, res, function() {
 			res.redirect("/campgrounds");
